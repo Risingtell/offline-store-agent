@@ -220,12 +220,12 @@ class GeminiBackend:
 
     _ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-    def __init__(self, model: str = "gemini-2.0-flash", api_key: str | None = None) -> None:
+    def __init__(self, model: str = "gemini-2.5-flash", api_key: str | None = None) -> None:
         """Create a Gemini backend, falling back to ``GEMINI_API_KEY`` for the key.
 
         Example::
 
-            backend = GeminiBackend(model="gemini-2.0-flash")
+            backend = GeminiBackend(model="gemini-2.5-flash")
         """
         self._model = model
         self._api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
