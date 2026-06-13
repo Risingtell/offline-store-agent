@@ -1,0 +1,2 @@
+# The offline-store-agent package has no third-party runtime dependencies
+# (standard library only). This file signals the Python runtime to Vercel.
