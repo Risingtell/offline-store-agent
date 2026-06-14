@@ -25,6 +25,49 @@ if TYPE_CHECKING:
     from offline_store_agent.llm import LLMBackend
 
 
+ENDPOINT_URL = "https://rising-store-agent.vercel.app"
+
+# NANDA-style AgentFacts: a machine-readable description of the agent's identity,
+# capabilities, and endpoints, served at /agent.json and /.well-known/agent.json.
+AGENT_FACTS: dict[str, Any] = {
+    "id": "rising-store-agent",
+    "name": "Offline-First Store Agent",
+    "description": (
+        "An LLM agent for low-connectivity shops in emerging markets. Records sales and "
+        "inventory offline, reconciles conflict-free via a field-level CRDT when "
+        "connectivity returns, and answers plain-language questions over the reconciled state."
+    ),
+    "version": "0.1.0",
+    "provider": {
+        "name": "Rising Technology",
+        "url": "https://github.com/Risingtell/offline-store-agent",
+    },
+    "endpoints": [{"protocol": "http", "url": ENDPOINT_URL}],
+    "interaction": {
+        "ask": {"method": "POST", "path": "/ask", "body": {"question": "string"}},
+        "health": {"method": "GET", "path": "/health"},
+        "sync": {"method": "POST", "path": "/sync", "body": {"state": "string"}},
+    },
+    "skills": [
+        {"name": "offline_changes", "description": "Edits made offline that have not yet synced."},
+        {"name": "low_stock", "description": "Inventory items at or below the reorder threshold."},
+        {"name": "sales_summary", "description": "Count and total value of recorded sales."},
+        {"name": "stock_of", "description": "Stock and price of items matching a name."},
+        {"name": "list_inventory", "description": "Every inventory item with its stock and price."},
+    ],
+    "model": "gemini-2.5-flash",
+    "tags": [
+        "offline-first",
+        "crdt",
+        "low-connectivity",
+        "emerging-markets",
+        "retail",
+        "reconciliation",
+    ],
+    "license": "Apache-2.0",
+}
+
+
 class StoreAgentService:
     """A hosted reconciliation hub: merges device state and answers questions.
 
@@ -69,6 +112,8 @@ class StoreAgentService:
                 "service": "offline-store-agent",
                 "records": len(self.store.all()),
             }
+        if method == "GET" and route in ("/agent.json", "/.well-known/agent.json"):
+            return 200, AGENT_FACTS
         if method == "GET" and route == "/state":
             return 200, {"state": self.store.export_state().decode("utf-8")}
         if method == "POST" and route == "/ask":

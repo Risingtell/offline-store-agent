@@ -58,6 +58,14 @@ class TestRouting:
         status, _ = StoreAgentService().handle("GET", "/nope", {})
         assert status == 404
 
+    def test_agent_facts_served(self) -> None:
+        for route in ("/agent.json", "/.well-known/agent.json"):
+            status, payload = StoreAgentService().handle("GET", route, {})
+            assert status == 200
+            assert payload["id"] == "rising-store-agent"
+            assert payload["endpoints"][0]["url"].startswith("https://")
+            assert len(payload["skills"]) == 5
+
 
 class TestStateSync:
     def test_state_round_trips_between_hubs(self) -> None:
