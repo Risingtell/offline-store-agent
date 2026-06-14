@@ -228,7 +228,10 @@ class GeminiBackend:
             backend = GeminiBackend(model="gemini-2.5-flash")
         """
         self._model = model
-        self._api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        # Strip whitespace and any stray BOM (env vars set via some shells gain a
+        # leading U+FEFF, which would make the request URL non-ASCII).
+        raw_key = api_key if api_key is not None else os.environ.get("GEMINI_API_KEY", "")
+        self._api_key = raw_key.replace("﻿", "").strip()
 
     def choose(self, question: str, tools: list[ToolSpec]) -> ToolCall:
         """Ask Gemini to name the tool that answers *question*.
