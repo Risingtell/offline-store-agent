@@ -31,7 +31,7 @@ CRDT contributed to NANDA Town (problem 02).
 
 ## How to use it
 
-Ask a question in plain English:
+Ask a question in plain English via `POST /ask`:
 
 ```bash
 curl -s https://rising-store-agent.vercel.app/ask \
