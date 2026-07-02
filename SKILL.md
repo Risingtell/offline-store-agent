@@ -17,8 +17,9 @@ CRDT. The agent then answers plain-language questions over the reconciled state.
 
 Two devices can edit the *same item* while both are offline — one correcting a
 price, the other adjusting stock — and **both changes survive** the merge, with no
-"last sync wins" data loss. The reconciliation engine builds on the LWW-Register
-CRDT contributed to NANDA Town (problem 02).
+"last sync wins" data loss. The reconciliation engine is a self-contained
+field-level LWW-Map CRDT — the same conflict-free coordination primitive NANDA
+Town is built around, implemented here from scratch for the offline store domain.
 
 ## Skills
 

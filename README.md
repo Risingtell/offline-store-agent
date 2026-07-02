@@ -6,8 +6,10 @@ reconciled **conflict-free** when connectivity returns, using a field-level
 Last-Writer-Wins CRDT. The agent then answers plain-language questions over the
 reconciled state ("what did I sell while the network was down?").
 
-The reconciliation engine builds on the LWW-Register CRDT contributed to NANDA
-Town (problem 02).
+The reconciliation engine is a self-contained field-level LWW-Map CRDT (see
+`offline_store_agent/crdt.py`) — the same conflict-free coordination primitive
+that NANDA Town is built around, implemented here from scratch for the offline
+store domain.
 
 **Live agent:** https://rising-store-agent.vercel.app
 **Demo video:** https://youtu.be/unQR-vIBs1A
