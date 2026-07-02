@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, cast
+from urllib.parse import parse_qs, urlparse
 
 from offline_store_agent.service import StoreAgentService
 
@@ -44,8 +45,13 @@ def make_handler(service: StoreAgentService) -> type[BaseHTTPRequestHandler]:
                 status, payload = 500, {"error": "internal error", "detail": str(exc)}
             self._respond(status, payload)
 
+        def _query_body(self) -> dict[str, Any]:
+            """Lift a ``?namespace=`` query param into the request body for GETs."""
+            namespace = parse_qs(urlparse(self.path).query).get("namespace", [None])[0]
+            return {"namespace": namespace} if namespace else {}
+
         def do_GET(self) -> None:  # noqa: N802 - http.server callback name
-            self._dispatch("GET", {})
+            self._dispatch("GET", self._query_body())
 
         def do_POST(self) -> None:  # noqa: N802 - http.server callback name
             length = int(self.headers.get("Content-Length", "0") or "0")

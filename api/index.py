@@ -17,6 +17,7 @@ import os
 import sys
 from http.server import BaseHTTPRequestHandler
 from typing import Any, cast
+from urllib.parse import parse_qs, urlparse
 
 # api/ lives one level below the repo root; make the package importable.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,8 +54,13 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this exac
             status, payload = 500, {"error": "internal error", "detail": str(exc)}
         self._respond(status, payload)
 
+    def _query_body(self) -> dict[str, Any]:
+        """Lift a ``?namespace=`` query param into the request body for GETs."""
+        namespace = parse_qs(urlparse(self.path).query).get("namespace", [None])[0]
+        return {"namespace": namespace} if namespace else {}
+
     def do_GET(self) -> None:  # noqa: N802 - http.server callback name
-        self._dispatch("GET", {})
+        self._dispatch("GET", self._query_body())
 
     def do_POST(self) -> None:  # noqa: N802 - http.server callback name
         length = int(self.headers.get("Content-Length", "0") or "0")

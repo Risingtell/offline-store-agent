@@ -87,6 +87,10 @@ class StoreAgentService:
         service.handle("GET", "/health", {})
     """
 
+    #: Namespaces must be short, url-safe tokens so a caller can't grow the hub
+    #: without bound or smuggle odd characters into a node id.
+    _MAX_NAMESPACE_LEN = 64
+
     def __init__(
         self,
         node_id: str = "hub",
@@ -96,14 +100,58 @@ class StoreAgentService:
     ) -> None:
         """Create the hub, optionally seeding a small demo inventory.
 
+        Each request may carry a ``namespace`` to reconcile against its own
+        isolated CRDT space; omitting it uses a shared ``demo`` space, so the
+        zero-config single call still works.
+
         Example::
 
             service = StoreAgentService(seed_demo=True)
         """
-        self.store = OfflineStore(node_id=node_id)
-        self.agent = StoreAgent(self.store, llm)
-        if seed_demo:
-            self._seed_demo()
+        self._node_id = node_id
+        self._llm = llm
+        self._default_ns = "demo"
+        self._seed_default = seed_demo
+        # namespace -> (its own store replica, its own agent over that replica)
+        self._spaces: dict[str, tuple[OfflineStore, StoreAgent]] = {}
+        self._space(self._default_ns)  # materialise (and seed) the default space
+
+    @property
+    def store(self) -> OfflineStore:
+        """The default (``demo``) space's store — kept for callers using one hub."""
+        return self._spaces[self._default_ns][0]
+
+    @property
+    def agent(self) -> StoreAgent:
+        """The default (``demo``) space's agent — kept for callers using one hub."""
+        return self._spaces[self._default_ns][1]
+
+    def _space(self, namespace: str) -> tuple[OfflineStore, StoreAgent]:
+        """Return (creating on first use) the isolated store+agent for *namespace*."""
+        space = self._spaces.get(namespace)
+        if space is None:
+            store = OfflineStore(node_id=f"{self._node_id}:{namespace}")
+            agent = StoreAgent(store, self._llm)
+            if namespace == self._default_ns and self._seed_default:
+                self._seed_demo(store)
+            self._spaces[namespace] = space = (store, agent)
+        return space
+
+    def _resolve_namespace(self, body: dict[str, Any]) -> str | None:
+        """Pick the namespace from the request body, or None if it is malformed."""
+        raw = body.get("namespace")
+        if raw is None:
+            return self._default_ns
+        if not isinstance(raw, str):
+            return None
+        ns = raw.strip()
+        if (
+            not ns
+            or len(ns) > self._MAX_NAMESPACE_LEN
+            or not ns.replace("-", "").replace("_", "").isalnum()
+        ):
+            return None
+        return ns
 
     def handle(self, method: str, path: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         """Route one request to a ``(status_code, json_payload)`` pair.
@@ -112,40 +160,46 @@ class StoreAgentService:
 
             status, payload = service.handle("POST", "/ask", {"question": "hi"})
         """
-        route = path.rstrip("/") or "/"
+        route = path.split("?", 1)[0].rstrip("/") or "/"
+        # AgentFacts is static identity — answer it without touching any space.
+        if method == "GET" and route in ("/agent.json", "/.well-known/agent.json"):
+            return 200, AGENT_FACTS
+        namespace = self._resolve_namespace(body)
+        if namespace is None:
+            return 400, {"error": "invalid 'namespace' (url-safe token, <= 64 chars)"}
+        store, agent = self._space(namespace)
         if method == "GET" and route in ("/", "/health"):
             return 200, {
                 "status": "ok",
                 "service": "offline-store-agent",
-                "records": len(self.store.all()),
+                "namespace": namespace,
+                "records": len(store.all()),
             }
-        if method == "GET" and route in ("/agent.json", "/.well-known/agent.json"):
-            return 200, AGENT_FACTS
         if method == "GET" and route == "/state":
-            return 200, {"state": self.store.export_state().decode("utf-8")}
+            return 200, {"namespace": namespace, "state": store.export_state().decode("utf-8")}
         if method == "POST" and route == "/ask":
             question = body.get("question")
             if not isinstance(question, str) or not question.strip():
                 return 400, {"error": "missing 'question'"}
-            reply = self.agent.ask(question)
+            reply = agent.ask(question)
             return 200, {"answer": reply.answer, "tool": reply.tool, "data": reply.data}
         if method == "POST" and route == "/records":
             record_id = body.get("id")
             fields = body.get("fields")
             if not isinstance(record_id, str) or not isinstance(fields, dict):
                 return 400, {"error": "need 'id' (string) and 'fields' (object)"}
-            self.store.put(record_id, cast("dict[str, JsonValue]", fields))
-            return 200, {"ok": True, "id": record_id}
+            store.put(record_id, cast("dict[str, JsonValue]", fields))
+            return 200, {"ok": True, "id": record_id, "namespace": namespace}
         if method == "POST" and route == "/sync":
             state = body.get("state")
             if not isinstance(state, str):
                 return 400, {"error": "need 'state' (string from /state)"}
-            self.store.merge_state(state.encode("utf-8"))
-            return 200, {"ok": True, "records": len(self.store.all())}
+            store.merge_state(state.encode("utf-8"))
+            return 200, {"ok": True, "namespace": namespace, "records": len(store.all())}
         return 404, {"error": "not found", "path": route}
 
-    def _seed_demo(self) -> None:
+    def _seed_demo(self, store: OfflineStore) -> None:
         """Seed a tiny shop inventory so a fresh hub has something to answer about."""
-        self.store.put("item-1", {"name": "Rice 5kg", "price": 1500, "stock": 12})
-        self.store.put("item-2", {"name": "Sugar 1kg", "price": 800, "stock": 4})
-        self.store.put("item-3", {"name": "Milk", "price": 600, "stock": 2})
+        store.put("item-1", {"name": "Rice 5kg", "price": 1500, "stock": 12})
+        store.put("item-2", {"name": "Sugar 1kg", "price": 800, "stock": 4})
+        store.put("item-3", {"name": "Milk", "price": 600, "stock": 2})

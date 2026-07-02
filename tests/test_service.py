@@ -78,6 +78,33 @@ class TestStateSync:
         assert payload["records"] == 3
 
 
+class TestNamespaces:
+    def test_namespaces_are_isolated(self) -> None:
+        # A write in one namespace must not be visible in another.
+        service = StoreAgentService()
+        service.handle(
+            "POST", "/records", {"namespace": "alice", "id": "x", "fields": {"stock": 5}}
+        )
+        _, a_state = service.handle("GET", "/state", {"namespace": "alice"})
+        _, b_state = service.handle("GET", "/state", {"namespace": "bob"})
+        assert '"x"' in a_state["state"]
+        assert '"x"' not in b_state["state"]
+
+    def test_default_namespace_when_omitted(self) -> None:
+        # Omitting the namespace always lands on the shared demo space.
+        service = StoreAgentService(seed_demo=True)
+        _, payload = service.handle("GET", "/health", {})
+        assert payload["namespace"] == "demo"
+        assert payload["records"] == 3
+
+    def test_invalid_namespace_rejected(self) -> None:
+        status, payload = StoreAgentService().handle(
+            "GET", "/health", {"namespace": "bad namespace!"}
+        )
+        assert status == 400
+        assert "namespace" in payload["error"]
+
+
 @pytest.fixture
 def live_base_url() -> Iterator[str]:
     """Run the agent on an ephemeral port in a background thread."""
@@ -118,3 +145,10 @@ class TestLiveServer:
         assert status == 200
         assert payload["tool"] == "low_stock"
         assert "low on stock" in payload["answer"]
+
+    def test_namespace_query_param_over_http(self, live_base_url: str) -> None:
+        # A ?namespace= on a GET is honoured end-to-end through the HTTP layer.
+        status, payload = _get(f"{live_base_url}/health?namespace=shopA")
+        assert status == 200
+        assert payload["namespace"] == "shopA"
+        assert payload["records"] == 0
