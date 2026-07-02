@@ -57,6 +57,23 @@ Other endpoints:
 - `POST /sync` — `{ "state": "..." }` merge a device's CRDT state into the hub.
 - `GET /state` — export the hub's reconciled CRDT state for a device to pull.
 
+### Namespaces (multi-tenant)
+
+Every request may carry an optional **`namespace`** — a url-safe token (≤ 64
+chars) that reconciles against its own **isolated** CRDT space. Omit it and you
+share the zero-config `demo` space; pass one and you get a private space no other
+caller can see. This lets any agent use the hub as its own conflict-free store.
+
+```bash
+# POST: put namespace in the JSON body
+curl -s https://rising-store-agent.vercel.app/records \
+  -H 'Content-Type: application/json' \
+  -d '{"namespace": "my-agent", "id": "beans", "fields": {"stock": 7}}'
+
+# GET: pass it as a query param
+curl -s "https://rising-store-agent.vercel.app/state?namespace=my-agent"
+```
+
 ## Reasoning
 
 Backed by Google Gemini (`gemini-2.5-flash`). A deterministic, key-free fallback

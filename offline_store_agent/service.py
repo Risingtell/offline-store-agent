@@ -51,6 +51,14 @@ AGENT_FACTS: dict[str, Any] = {
         "health": {"method": "GET", "path": "/health"},
         "sync": {"method": "POST", "path": "/sync", "body": {"state": "string"}},
     },
+    "namespaces": {
+        "description": (
+            "Optional 'namespace' (url-safe token, <= 64 chars) on any request reconciles "
+            "against an isolated CRDT space; omit it to share the 'demo' space."
+        ),
+        "post": "include as a 'namespace' field in the JSON body",
+        "get": "pass as a '?namespace=' query parameter",
+    },
     "skills": [
         {"name": "offline_changes", "description": "Edits made offline that have not yet synced."},
         {"name": "low_stock", "description": "Inventory items at or below the reorder threshold."},
