@@ -33,9 +33,12 @@ AGENT_FACTS: dict[str, Any] = {
     "id": "rising-store-agent",
     "name": "Offline-First Store Agent",
     "description": (
-        "An LLM agent for low-connectivity shops in emerging markets. Records sales and "
-        "inventory offline, reconciles conflict-free via a field-level CRDT when "
-        "connectivity returns, and answers plain-language questions over the reconciled state."
+        "A conflict-free offline-sync layer for agents. Any agent or device can edit shared "
+        "state while fully disconnected and reconcile it without conflict via a field-level "
+        "LWW CRDT (POST /records, POST /sync, GET /state) — concurrent edits to different "
+        "fields of the same record all survive, independent of sync order. Ships with a "
+        "low-connectivity shop agent as the reference application, which answers "
+        "plain-language questions over the reconciled state (POST /ask)."
     ),
     "version": "0.1.0",
     "provider": {
@@ -58,7 +61,11 @@ AGENT_FACTS: dict[str, Any] = {
     "model": "gemini-2.5-flash",
     "tags": [
         "offline-first",
+        "state-sync",
+        "conflict-free",
         "crdt",
+        "agent-coordination",
+        "building-block",
         "low-connectivity",
         "emerging-markets",
         "retail",

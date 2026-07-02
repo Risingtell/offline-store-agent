@@ -10,16 +10,19 @@
 
 ## What it does
 
-An LLM agent for **low-connectivity shops in emerging markets**. Shop records —
-sales and inventory — are edited **offline-first** on any device and reconciled
-**conflict-free** when connectivity returns, using a field-level Last-Writer-Wins
-CRDT. The agent then answers plain-language questions over the reconciled state.
+A **conflict-free offline-sync layer for agents**. Any agent or device can edit
+shared state while fully disconnected and reconcile it **without conflict** when
+connectivity returns, using a field-level Last-Writer-Wins CRDT. Concurrent edits
+to *different fields of the same record* all survive — one device correcting a
+price, another adjusting stock, both kept — with no "last sync wins" data loss,
+independent of sync order. This is the conflict-free coordination primitive NANDA
+Town is built around, exposed over HTTP (`POST /records`, `POST /sync`,
+`GET /state`) as a reusable building block.
 
-Two devices can edit the *same item* while both are offline — one correcting a
-price, the other adjusting stock — and **both changes survive** the merge, with no
-"last sync wins" data loss. The reconciliation engine is a self-contained
-field-level LWW-Map CRDT — the same conflict-free coordination primitive NANDA
-Town is built around, implemented here from scratch for the offline store domain.
+Shipped on top is a **low-connectivity shop agent** as the reference application:
+it records sales and inventory offline, reconciles on reconnect, and answers
+plain-language questions over the reconciled state (`POST /ask`) — built for shops
+in emerging markets where the network is unreliable.
 
 ## Skills
 

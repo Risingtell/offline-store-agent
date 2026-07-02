@@ -1,15 +1,17 @@
 # Offline-first Store Agent
 
-An LLM agent for low-connectivity shops (built for the MIT NANDA hackathon). Shop
-records — sales, inventory — are edited **offline-first** on any device and
-reconciled **conflict-free** when connectivity returns, using a field-level
-Last-Writer-Wins CRDT. The agent then answers plain-language questions over the
-reconciled state ("what did I sell while the network was down?").
+A **conflict-free offline-sync layer for agents** (built for the MIT NANDA
+hackathon). Any agent or device can edit shared state while fully disconnected
+and reconcile it **without conflict** when connectivity returns, using a
+field-level Last-Writer-Wins CRDT — concurrent edits to *different fields of the
+same record* all survive, independent of sync order. It's the conflict-free
+coordination primitive NANDA Town is built around (see
+`offline_store_agent/crdt.py`), exposed over HTTP as a reusable building block.
 
-The reconciliation engine is a self-contained field-level LWW-Map CRDT (see
-`offline_store_agent/crdt.py`) — the same conflict-free coordination primitive
-that NANDA Town is built around, implemented here from scratch for the offline
-store domain.
+Shipped on top is a **low-connectivity shop agent** as the reference application:
+shop records — sales, inventory — are edited offline on any device, reconciled on
+reconnect, and the agent answers plain-language questions over the reconciled
+state ("what did I sell while the network was down?").
 
 **Live agent:** https://rising-store-agent.vercel.app
 **Demo video:** https://youtu.be/unQR-vIBs1A
