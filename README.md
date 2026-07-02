@@ -9,6 +9,9 @@ reconciled state ("what did I sell while the network was down?").
 The reconciliation engine builds on the LWW-Register CRDT contributed to NANDA
 Town (problem 02).
 
+**Live agent:** https://rising-store-agent.vercel.app
+**Demo video:** https://youtu.be/unQR-vIBs1A
+
 ## Layout
 
 - `offline_store_agent/crdt.py` — field-level LWW-Map CRDT store (the engine).

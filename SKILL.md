@@ -4,6 +4,7 @@
 **Endpoint:** https://rising-store-agent.vercel.app
 **AgentFacts:** https://rising-store-agent.vercel.app/agent.json
 **Source:** https://github.com/Risingtell/offline-store-agent
+**Demo:** https://youtu.be/unQR-vIBs1A
 **Author:** Oluwasogo Ajala — Rising Technology (Kano, Nigeria)
 **License:** Apache-2.0
 
